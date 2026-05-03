@@ -1,0 +1,30 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<types:mule xmlns:types="http://www.mulesoft.org/schema/mule/types">
+  <types:catalog>
+    <types:type name="lead_input" format="csv">
+      <types:shape format="weave" example="examples/Test.csv"><![CDATA[%dw 2.0
+
+type lead_input = Array<{|  first_name: String,   last_name: String,   email: String,   company: String|}> {"header": "true",
+"separator": ",",
+"headerLineNumber": "0",
+"isQuotedString": "false"}
+
+]]></types:shape>
+      <types:properties>
+        <types:property name="headerLineNumber" value="0"/>
+        <types:property name="header" value="true"/>
+        <types:property name="isQuotedString" value="false"/>
+        <types:property name="separator" value=","/>
+      </types:properties>
+    </types:type>
+  </types:catalog>
+  <types:enrichment select="#638e82ca-2909-4222-b76a-1ccda30db9bd">
+    <types:processor-declaration>
+      <types:input-event>
+        <types:message>
+          <types:payload type="lead_input"/>
+        </types:message>
+      </types:input-event>
+    </types:processor-declaration>
+  </types:enrichment>
+</types:mule>

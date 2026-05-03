@@ -1,0 +1,4 @@
+salesforce:
+    keyStore: "salesforce-dev.jks"
+api:
+    port: "8081"

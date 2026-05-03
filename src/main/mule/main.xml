@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:batch="http://www.mulesoft.org/schema/mule/batch" 
+				xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+		        xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+				xmlns:http="http://www.mulesoft.org/schema/mule/http" 
+				xmlns="http://www.mulesoft.org/schema/mule/core" 
+				xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
+				xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+									http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+									http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+									http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd">
+
+
+	
+		<!-- Main Flow: POST /customers -->
+
+	<flow
+			name="create-lead-in-sf"
+			doc:name="create-leads-flow" doc:id="809215e5-133b-4268-b0a1-6a30b6925439">
+	
+			<!-- Log incoming request -->
+			<logger
+				level="INFO"
+				message="Received request to create leads: #[payload]"
+				doc:name="Log Request" />
+	
+			<!-- Transform customer JSON to Salesforce Lead format -->
+			<ee:transform
+				doc:name="Transform to Salesforce Lead Format" doc:id="638e82ca-2909-4222-b76a-1ccda30db9bd">
+				<ee:message>
+				<ee:set-payload resource="dwl/source-to-target-transformation.dwl" />
+				
+</ee:message>
+			</ee:transform>
+	
+			<!-- Log transformed payload -->
+			<logger
+				level="INFO"
+				message="Transformed payload: #[payload]"
+				doc:name="Log Transformed Data" />
+	
+			<!-- Insert Leads into Salesforce -->
+		<salesforce:create
+				config-ref="Salesforce_Config"
+				type="Lead"
+				doc:name="Create Leads in Salesforce">
+				<salesforce:records>#[payload]</salesforce:records>
+			</salesforce:create>
+	
+			<!-- Log Salesforce response -->
+		<logger
+				level="INFO"
+				message="Salesforce response: #[payload]"
+				doc:name="Log Salesforce Response" />
+	
+			<!-- Transform response for API caller -->
+			<ee:transform doc:name="Build Success Response">
+	            <ee:message>
+	                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    status: "success",
+    message: "Leads created successfully",
+}]]></ee:set-payload>
+	            </ee:message>
+	        </ee:transform>
+	
+	        <!-- Set HTTP status to 201 Created -->
+	        <set-variable variableName="httpStatus" value="201" doc:name="Set HTTP Status 201" />
+	    </flow>
+	<flow name="create-lead-in-sf-bulkV1" doc:id="ac495b68-1ff7-475f-ab48-29958fd3a046" >
+		<logger level="INFO" doc:name="Log Request" doc:id="74fe1f1c-69f2-49d9-ac74-b9dada691334" message="Received request to create leads: #[payload]" />
+		<ee:transform doc:name="Transform to Salesforce Lead Format" doc:id="619e8d0d-ba56-49db-9ca4-823d2b012f78" >
+			<ee:message >
+				<ee:set-payload resource="dwl/source-to-target-transformation_bulk.dwl" />
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Log Transformed Data" doc:id="cc764590-adcc-48bc-9e4e-36bd90d97999" message="Transformed payload: #[payload]" />
+		<salesforce:create-job doc:name="Create job" doc:id="cb75947c-7bc7-4509-ae6a-5e5960e58d80" config-ref="Salesforce_Config" operation="insert" type="Lead" target="jobInfo">
+			<salesforce:create-job-request ><![CDATA[#[%dw 2.0
+output application/java
+---
+{
+	contentType:"XML",
+	concurrencyMode: "Serial"
+}]]]></salesforce:create-job-request>
+		</salesforce:create-job>
+		<salesforce:create-batch doc:name="Create batch" doc:id="d9b4adac-d358-430f-a290-56c89531b74c" config-ref="Salesforce_Config" jobInfoBatch="#[vars.jobInfo]" target="batchInfo"/>
+		<salesforce:close-job doc:name="Close job" doc:id="237a9cc6-47b2-4219-a094-5559d5e48fd8" config-ref="Salesforce_Config" jobId="#[vars.batchInfo.jobId]"/>
+		<logger level="INFO" doc:name="Log Salesforce Response" doc:id="c233df33-ae75-4bf7-8754-a9359e78c810" message="Salesforce response: #[payload]" />
+		<ee:transform doc:name="Build Success Response" doc:id="b2d0e6d1-b342-4ade-b685-6bef8be6b87d" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.batchInfo]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-variable value="201" doc:name="Set HTTP Status 201" doc:id="492ec99b-3235-4047-8841-2ce8d7445694" variableName="httpStatus" />
+	</flow>
+	<flow name="create-lead-in-sf-bulkV2" doc:id="6716f3d5-bcd7-4b86-b392-d64e57e67cbb" >
+		<logger level="INFO" doc:name="Log Request" doc:id="0985f10d-6ea4-4687-8568-300016a67244" message="Received request to create leads: #[payload]" />
+		<ee:transform doc:name="Transform to Salesforce Lead Format" doc:id="e4f92bd4-c97e-4a0a-b960-404d9bce7342" >
+			<ee:message >
+				<ee:set-payload resource="dwl/source-to-target-transformation-bulkv2.dwl" />
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Log Transformed Data" doc:id="65f5609e-961b-4cf5-8c11-3e944cf2eb85" message="Transformed payload: #[payload]" />
+		<salesforce:create-job-bulk-api-v2 doc:name="Create job bulk api v 2" doc:id="fafad764-c43d-46f5-973e-184e688dfe39" config-ref="Salesforce_Config" objectType="Lead" operation="insert" lineEnding="CRLF" target="batchInfo"/>
+		<logger level="INFO" doc:name="Log Salesforce Response" doc:id="69619a53-a3d4-41d4-8940-09f3b0054d12" message="Salesforce response: #[payload]" />
+		<ee:transform doc:name="Build Success Response" doc:id="506e6bc9-805e-4908-9b21-efd1042a304f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.batchInfo]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-variable value="201" doc:name="Set HTTP Status 201" doc:id="5e712bac-6c73-4e18-ab3d-56676160be80" variableName="httpStatus" />
+	</flow>
+	    
+</mule>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+	
+	<salesforce:sfdc-config
+		name="Salesforce_Config"
+		doc:name="Salesforce Config"
+		doc:id="a3ed8dc6-7a44-492a-b430-81113ceffe6e">
+		<salesforce:jwt-connection
+			consumerKey="${salesforce.consumerKey}"
+			keyStore="${salesforce.keyStore}"
+			storePassword="${salesforce.storePassword}"
+			certificateAlias="${salesforce.certificateAlias}"
+			principal="${salesforce.principal}" />
+		</salesforce:sfdc-config>
+
+	<configuration-properties
+		doc:name="Configuration properties"
+		doc:id="54519da7-fd9f-4ae7-9c97-1f1dfcdf054d"
+		file="properties-${env}.yaml"
+		doc:description="Environment Specific" />
+		
+	<configuration-properties
+		doc:name="Configuration properties"
+		doc:id="1765f89c-b67d-4df3-b2e3-743146a76873"
+		file="properties.yaml" />
+		
+
+
+</mule>

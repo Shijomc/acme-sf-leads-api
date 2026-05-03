@@ -1,0 +1,5 @@
+salesforce:
+    consumerKey: "3MVG9dAEux2v1sLtwf_cA5BxmCiA.Wi62Ecd95gLOl75ox1OXv8Z7_xDBzY6o2i08jsT6kRzpglpk.vsSv2q1"
+    storePassword: "mulesoft"
+    certificateAlias: "mule_jwt"
+    principal: "shijomchacko@gmail.com"
