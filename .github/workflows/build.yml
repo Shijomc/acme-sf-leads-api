@@ -1,14 +1,18 @@
-name: Pipeline to deploy to CloudHub2.0
+name: Pipeline to deploy to CloudHub 2.0
+
 on:
   push:
     branches: [master]
   pull_request:
-    branches: [master]        
+    branches: [master]
   workflow_dispatch:
-    
-concurrency: 
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
   group: stg-${{ github.event.repository.name }}
-  cancel-in-progress: true  
+  cancel-in-progress: true
 
 jobs:
   DeployToExchange:
@@ -30,12 +34,69 @@ jobs:
           distribution: "temurin"
           java-version: 17
           cache: maven
-          check-latest: false
+
+      - name: Create Maven Settings
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                    http://maven.apache.org/xsd/settings-1.0.0.xsd">
+            <servers>
+              <server>
+                <id>anypoint-exchange-v3</id>
+                <username>~~~Client~~~</username>
+                <password>CLIENT_ID_PLACEHOLDER~?~CLIENT_SECRET_PLACEHOLDER</password>
+              </server>
+              <server>
+                <id>MuleRepository</id>
+                <username>~~~Client~~~</username>
+                <password>CLIENT_ID_PLACEHOLDER~?~CLIENT_SECRET_PLACEHOLDER</password>
+              </server>
+            </servers>
+            <profiles>
+              <profile>
+                <id>mule-extra-repos</id>
+                <activation>
+                  <activeByDefault>true</activeByDefault>
+                </activation>
+                <repositories>
+                  <repository>
+                    <id>MuleRepository</id>
+                    <name>MuleSoft Public Repository</name>
+                    <url>https://repository.mulesoft.org/nexus/content/repositories/public/</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                  </repository>
+                  <repository>
+                    <id>anypoint-exchange-v3</id>
+                    <name>Anypoint Exchange</name>
+                    <url>https://maven.anypoint.mulesoft.com/api/v3/maven</url>
+                    <layout>default</layout>
+                  </repository>
+                </repositories>
+                <pluginRepositories>
+                  <pluginRepository>
+                    <id>MuleRepository</id>
+                    <url>https://repository.mulesoft.org/nexus/content/repositories/public/</url>
+                  </pluginRepository>
+                </pluginRepositories>
+              </profile>
+            </profiles>
+          </settings>
+          EOF
+          # Inject secrets into settings.xml
+          sed -i "s|CLIENT_ID_PLACEHOLDER|${{ secrets.CONNECTED_APP_CLIENT_ID }}|g" ~/.m2/settings.xml
+          sed -i "s|CLIENT_SECRET_PLACEHOLDER|${{ secrets.CONNECTED_APP_CLIENT_SECRET }}|g" ~/.m2/settings.xml
+
       - name: Publish to Exchange
         run: |
-          mvn deploy --settings .maven/settings.xml -DskipMunitTests \
+          mvn deploy -DskipMunitTests \
           -Dclient.id="${{ secrets.CONNECTED_APP_CLIENT_ID }}" \
           -Dclient.secret="${{ secrets.CONNECTED_APP_CLIENT_SECRET }}"
+
   DeployToCloudHub2:
     needs: DeployToExchange
     runs-on: ubuntu-latest
@@ -55,10 +116,67 @@ jobs:
         with:
           distribution: "temurin"
           java-version: 17
-      
+          cache: maven
+
+      - name: Create Maven Settings
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                    http://maven.apache.org/xsd/settings-1.0.0.xsd">
+            <servers>
+              <server>
+                <id>anypoint-exchange-v3</id>
+                <username>~~~Client~~~</username>
+                <password>CLIENT_ID_PLACEHOLDER~?~CLIENT_SECRET_PLACEHOLDER</password>
+              </server>
+              <server>
+                <id>MuleRepository</id>
+                <username>~~~Client~~~</username>
+                <password>CLIENT_ID_PLACEHOLDER~?~CLIENT_SECRET_PLACEHOLDER</password>
+              </server>
+            </servers>
+            <profiles>
+              <profile>
+                <id>mule-extra-repos</id>
+                <activation>
+                  <activeByDefault>true</activeByDefault>
+                </activation>
+                <repositories>
+                  <repository>
+                    <id>MuleRepository</id>
+                    <name>MuleSoft Public Repository</name>
+                    <url>https://repository.mulesoft.org/nexus/content/repositories/public/</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                  </repository>
+                  <repository>
+                    <id>anypoint-exchange-v3</id>
+                    <name>Anypoint Exchange</name>
+                    <url>https://maven.anypoint.mulesoft.com/api/v3/maven</url>
+                    <layout>default</layout>
+                  </repository>
+                </repositories>
+                <pluginRepositories>
+                  <pluginRepository>
+                    <id>MuleRepository</id>
+                    <url>https://repository.mulesoft.org/nexus/content/repositories/public/</url>
+                  </pluginRepository>
+                </pluginRepositories>
+              </profile>
+            </profiles>
+          </settings>
+          EOF
+          # Inject secrets into settings.xml
+          sed -i "s|CLIENT_ID_PLACEHOLDER|${{ secrets.CONNECTED_APP_CLIENT_ID }}|g" ~/.m2/settings.xml
+          sed -i "s|CLIENT_SECRET_PLACEHOLDER|${{ secrets.CONNECTED_APP_CLIENT_SECRET }}|g" ~/.m2/settings.xml
+
       - name: Deploy to CloudHub 2.0
         run: |
-          mvn deploy --settings .maven/settings.xml -DskipMunitTests -DmuleDeploy \
+          mvn deploy -DskipMunitTests -DmuleDeploy \
           -Dclient.id="${{ secrets.CONNECTED_APP_CLIENT_ID }}" \
           -Dclient.secret="${{ secrets.CONNECTED_APP_CLIENT_SECRET }}" \
-          -Dmule.env="dev" 
+          -Dmule.env="dev"
